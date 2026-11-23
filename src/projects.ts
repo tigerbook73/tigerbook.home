@@ -21,7 +21,9 @@ export type Project = {
   websiteLabel?: string
   websiteNote?: string
   packages?: { name: string; url: string }[]
-  media: ProjectMedia
+  // Both are optional and appear only after opening the project's details.
+  details?: string
+  media?: ProjectMedia
   featured?: boolean
 }
 

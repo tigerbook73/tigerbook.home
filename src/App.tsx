@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Code2, ExternalLink, LockKeyhole, Monitor, Moon, Play, Search, Sparkles, Sun, X, ZoomIn } from 'lucide-react'
+import { Code2, ExternalLink, FileText, LockKeyhole, Monitor, Moon, Search, Sparkles, Sun, X } from 'lucide-react'
 import { profile, projects, type Project, type ProjectMedia } from './projects'
 
 type Theme = 'light' | 'dark'
@@ -44,24 +44,20 @@ function ThemeToggle() {
   </button>
 }
 
-function MediaContent({ media, expanded = false }: { media: ProjectMedia; expanded?: boolean }) {
+function MediaContent({ media }: { media: ProjectMedia }) {
   const [failed, setFailed] = useState(false)
   if (failed) return <div className="media-fallback"><Monitor size={36} /><span>Preview unavailable</span></div>
   if (media.kind === 'video') {
-    if (!expanded && media.poster) return <img src={media.poster} alt={media.alt} loading="lazy" onError={() => setFailed(true)} />
-    return <video src={media.src} poster={media.poster} controls={expanded} muted={!expanded} playsInline preload="metadata" aria-label={media.alt} onError={() => setFailed(true)} />
+    return <video src={media.src} poster={media.poster} controls playsInline preload="metadata" aria-label={media.alt} onError={() => setFailed(true)} />
   }
-  return <img src={media.src} alt={media.alt} loading={expanded ? 'eager' : 'lazy'} width={1200} height={750} onError={() => setFailed(true)} />
+  return <img src={media.src} alt={media.alt} width={1200} height={750} onError={() => setFailed(true)} />
 }
 
-function ProjectCard({ project, onPreview }: { project: Project; onPreview: (project: Project) => void }) {
+function ProjectCard({ project, onDetails }: { project: Project; onDetails: (project: Project) => void }) {
+  const hasDetails = Boolean(project.details?.trim() || project.media)
   return <article className={`project-card ${project.featured ? 'featured-card' : ''}`} aria-labelledby={`${project.id}-title`}>
-    <button className={`project-visual visual-${project.id}`} onClick={() => onPreview(project)} aria-label={`Open ${project.title} ${project.media.kind === 'video' ? 'video' : 'preview'}`}>
-      <MediaContent media={project.media} />
-      <span className="preview-control">{project.media.kind === 'video' ? <Play size={15} /> : <ZoomIn size={15} />}<span>{project.media.kind === 'video' ? 'Watch demo' : 'View preview'}</span></span>
-    </button>
     <div className="project-body">
-      <div className="project-meta"><span>{project.category}</span>{project.featured && <span className="featured-label"><Sparkles size={12} /> Featured</span>}</div>
+      <div className="project-meta"><span>{project.category}</span>{project.featured && <span className="featured-label"><Sparkles size={12} /> Featured</span>}{hasDetails && <button className="details-button" onClick={() => onDetails(project)} aria-label={`View details for ${project.title}`} aria-haspopup="dialog"><FileText size={14} />Details</button>}</div>
       <h3 id={`${project.id}-title`}>{project.title}</h3>
       <p className="project-tagline">{project.tagline}</p>
       <p className="project-description">{project.description}</p>
@@ -79,7 +75,7 @@ function ProjectCard({ project, onPreview }: { project: Project; onPreview: (pro
   </article>
 }
 
-function PreviewDialog({ project, onClose }: { project: Project | null; onClose: () => void }) {
+function DetailsDialog({ project, onClose }: { project: Project | null; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const element = dialog.current
@@ -90,11 +86,12 @@ function PreviewDialog({ project, onClose }: { project: Project | null; onClose:
     return () => { element.close(); document.body.style.overflow = oldOverflow }
   }, [project])
 
-  return <dialog ref={dialog} className="preview-dialog" onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }} aria-labelledby="preview-title" aria-describedby="preview-caption">
+  return <dialog ref={dialog} className="details-dialog" onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }} aria-labelledby="details-title" aria-describedby="details-description">
     {project && <div className="dialog-content">
-      <div className="dialog-heading"><div><span className="eyebrow">PROJECT PREVIEW</span><h2 id="preview-title">{project.title}</h2></div><button autoFocus onClick={onClose} className="icon-button" aria-label="Close preview"><X size={22} /></button></div>
-      <div className="expanded-media"><MediaContent key={project.id} media={project.media} expanded /></div>
-      <div className="dialog-footer"><p id="preview-caption">{project.media.caption ?? project.media.alt}</p>{project.website && <a href={project.website} className="code-link" target="_blank" rel="noopener noreferrer">Visit site <ExternalLink size={14} /></a>}</div>
+      <div className="dialog-heading"><div><span className="eyebrow">PROJECT DETAILS</span><h2 id="details-title">{project.title}</h2></div><button autoFocus onClick={onClose} className="icon-button" aria-label="Close details"><X size={22} /></button></div>
+      <p className="details-description" id="details-description">{project.details?.trim() || project.description}</p>
+      {project.media && <figure className="details-media"><div className="expanded-media"><MediaContent key={project.id} media={project.media} /></div>{project.media.caption && <figcaption>{project.media.caption}</figcaption>}</figure>}
+      {(project.github || project.website) && <div className="dialog-footer">{project.github && <a href={project.github} className="code-link" target="_blank" rel="noopener noreferrer"><Github size={16} />GitHub</a>}{project.website && <a href={project.website} className="code-link" target="_blank" rel="noopener noreferrer">Visit site <ExternalLink size={14} /></a>}</div>}
     </div>}
   </dialog>
 }
@@ -102,9 +99,8 @@ function PreviewDialog({ project, onClose }: { project: Project | null; onClose:
 export default function App() {
   const [category, setCategory] = useState<string>('All projects')
   const [query, setQuery] = useState('')
-  const [preview, setPreview] = useState<Project | null>(null)
+  const [details, setDetails] = useState<Project | null>(null)
   const filtered = projects.filter(project => (category === 'All projects' || project.category === category) && [project.title, project.description, project.tagline, ...project.stack].join(' ').toLowerCase().includes(query.toLowerCase().trim()))
-  const hasFilter = category !== 'All projects' || query.trim() !== ''
 
   return <>
     <a href="#main" className="skip-link">Skip to content</a>
@@ -118,14 +114,13 @@ export default function App() {
     <main id="main" className="page-width">
       <section className="hero" aria-labelledby="page-title">
         <div className="hero-copy"><p className="hero-eyebrow"><span className="eyebrow-line" /> A PERSONAL CORNER OF THE INTERNET</p><h1 id="page-title">Tigerbook's<br /><span>Projects Page<span className="heading-period">.</span></span></h1><p className="hero-description">Small ideas, useful tools, and things built out of curiosity.<br className="desktop-break" /> A collection of what I've been working on.</p><a href="#projects" className="hero-link"><span className="little-grid" aria-hidden="true"><i /><i /><i /><i /></span>Explore the projects<span className="count-pill">{projects.length}</span></a></div>
-        <div className="hero-art" aria-hidden="true"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-cross cross-one">+</div><div className="art-cross cross-two">+</div><div className="art-window"><div className="art-window-top"><span /><span /><span /><div>ideas → reality</div></div><div className="art-code"><span className="code-comment">// always a work in progress</span><p><span className="code-keyword">const</span> project = {'{'}</p><p className="code-indent">curiosity: <span className="code-string">"endless"</span>,</p><p className="code-indent">coffee: <span className="code-string">true</span>,</p><p className="code-indent">possibilities: <span className="code-value">Infinity</span></p><p>{'}'}<span className="code-cursor" /></p></div><div className="art-window-bottom"><Code2 size={13} /><span>build. learn. repeat.</span><Check size={13} /></div></div><div className="art-sticker"><Sparkles size={17} /><span>Made with curiosity</span></div></div>
       </section>
 
       <section id="projects" className="projects-section" aria-labelledby="projects-title">
         <div className="section-heading"><div className="section-title"><h2 id="projects-title">Selected projects</h2><span className="section-count">{String(projects.length).padStart(2, '0')}</span></div><p>A few things from my workbench.</p></div>
         <div className="project-toolbar"><div className="category-filters" role="group" aria-label="Filter projects by category">{categories.map(item => <button key={item} className={`filter-button ${category === item ? 'is-active' : ''}`} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}{item === 'All projects' && <span>{projects.length}</span>}</button>)}</div><div className="search-field"><Search size={16} aria-hidden="true" /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a project..." aria-label="Search projects" />{query && <button onClick={() => setQuery('')} aria-label="Clear search"><X size={15} /></button>}</div></div>
         <p className="sr-only" role="status" aria-live="polite">{filtered.length} {filtered.length === 1 ? 'project' : 'projects'} found</p>
-        <div className={`project-grid ${hasFilter ? 'is-filtered' : ''}`}>{filtered.map(project => <ProjectCard key={project.id} project={project} onPreview={setPreview} />)}</div>
+        <div className="project-grid">{filtered.map(project => <ProjectCard key={project.id} project={project} onDetails={setDetails} />)}</div>
         {filtered.length === 0 && <div className="empty-state"><Search size={30} /><h3>No projects found</h3><p>Try another keyword or explore all the projects.</p><button className="reset-button" onClick={() => { setQuery(''); setCategory('All projects') }}>Show all projects</button></div>}
         <div className="collection-end"><span /><p>There's always another idea in the works.</p><span /></div>
       </section>
@@ -134,6 +129,6 @@ export default function App() {
     </main>
 
     <footer className="site-footer page-width"><p>© {new Date().getFullYear()} Tigerbook<span className="footer-separator">/</span>Built with a little curiosity.</p><a href="https://www.tigerbook.top">www.tigerbook.top</a></footer>
-    <PreviewDialog project={preview} onClose={() => setPreview(null)} />
+    <DetailsDialog project={details} onClose={() => setDetails(null)} />
   </>
 }

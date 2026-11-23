@@ -28,11 +28,12 @@ pnpm deploy:check  # 构建并检查 Cloudflare 部署包，不发布
 
 ## 页面设计和功能
 
-- 简洁的个人作品集布局：绿色点缀、重点项目、项目卡片、技术标签。
-- 手机单列、桌面双列，重点项目在宽屏采用左右布局。
+- 简洁的纯信息作品集布局：绿色点缀、项目简介、技术标签和链接，首页不显示图片或视频。
+- 手机单列、桌面双列，重点项目通过边框和标签突出。
 - 亮色与暗色模式；首次跟随系统，手动选择后保存在当前浏览器，并同步同源标签页。
 - 分类筛选与搜索：搜索项目名称、描述和技术栈。
-- 图片大图和原生视频预览；弹窗支持 Escape、关闭按钮、背景点击。
+- 项目可选详细介绍、图片或视频；配置后显示 Details 入口，点击才加载详情中的媒体。未配置的项目不显示入口，也不占用图片位置。
+- 详情弹窗支持 Escape、关闭按钮、背景点击。
 - 键盘焦点、跳过导航、减少动画偏好、搜索结果提示。
 - 本地托管字体与预览图，不依赖第三方图片服务。
 - 网站图标、canonical、分享图片、robots.txt、sitemap.xml 和 404 页面。
@@ -53,7 +54,7 @@ pnpm deploy:check  # 构建并检查 Cloudflare 部署包，不发布
 
 Rambos Grooming、Next.js Shopify 和两个 npm 包的地址以所有者最新提供的链接为准。当前环境未能访问 GitHub 或验证这些外部站点的远程可访问性，因此以上内容不是 GitHub 在线读取结果，站点入口也不代表已验证新版本上线。不在页面展示过时的相对更新时间。
 
-目前 `public/projects/*.svg` 是为展示页绘制的**项目示意图，不是真实截图**，弹窗中也会说明。将真实截图或视频放到 `public/projects/` 后，更改对应的 `media`。
+目前 `public/projects/*.svg` 是为展示页绘制的**项目示意图，不是真实截图**，仅在点击 Details 后展示，弹窗中也会说明。将真实截图或视频放到 `public/projects/` 后，更改对应的可选 `media`。删除 `media` 后不会保留空白图片区域。
 
 ```ts
 {
@@ -65,15 +66,23 @@ Rambos Grooming、Next.js Shopify 和两个 npm 包的地址以所有者最新�
   stack: ['React', 'TypeScript'],
   github: 'https://github.com/your-name/your-project',
   website: 'https://your-project.example.com',
-  media: {
-    kind: 'image',
-    src: '/projects/my-project.webp',
-    alt: '项目主页截图',
-    caption: '主页截图',
-  },
   featured: false,
 }
 ```
+
+上面的配置只展示信息卡片。需要详情时，可额外配置 `details`（纯文本，支持换行）和／或 `media`，任一存在就会显示 Details 入口：
+
+```ts
+details: '补充项目背景、功能与实现方式。\n\n可以分段说明。',
+media: {
+  kind: 'image',
+  src: '/projects/my-project.webp',
+  alt: '项目主页截图',
+  caption: '主页截图',
+},
+```
+
+仅有 `details` 时，详情也可以是纯文本；没有 `details` 和 `media` 的项目直接通过 GitHub、站点和 npm 链接访问。
 
 没有确认部署地址时使用 `website: null`，页面会显示 `No demo linked`；工具可用 `websiteNote` 标注 `Command-line tools`、`Bash extension` 或 `MCP server`。私有项目用 `github: null`，显示 `Private source`。不要填写假地址。`featured: true` 可突出展示一个重点项目。
 
@@ -146,7 +155,7 @@ Cloudflare 中的 Worker 名称应与 `wrangler.jsonc` 一致。安装依赖时�
 ## 文件位置
 
 ```text
-src/App.tsx          页面、主题、筛选与预览弹窗
+src/App.tsx          页面、主题、筛选与可选详情弹窗
 src/projects.ts      项目内容和媒体配置
 src/style.css        Tailwind 入口、主题变量和响应式样式
 public/projects/    项目预览素材
@@ -160,7 +169,7 @@ wrangler.jsonc      Cloudflare 部署和正式域名
 
 - `pnpm install --offline --frozen-lockfile`：通过，使用当前环境已缓存的依赖。
 - `pnpm build`：通过，包含 TypeScript 检查。
-- DOM 交互检查：分类、搜索、空结果重置、预览开关、滚动恢复、主题持久化、跟随系统及外链属性均通过。
+- DOM 交互检查：分类、搜索、空结果重置、详情开关、媒体按需显示、滚动恢复、主题持久化、跟随系统及外链属性。
 - 静态产物检查、SVG/XML 解析、Cloudflare `deploy --dry-run`：通过。
 - 当前环境限制浏览器启动，手机和桌面的真实渲染、视觉效果、原生弹窗焦点行为尚未完成浏览器验收。
-- 未发布：Cloudflare 已保存令牌过期，认证服务在当前环境不可达，无法刷新。没有修改已保存的认证信息。
+- 初版已由用户执行 `pnpm deploy` 发布到 `www.tigerbook.top`，日志版本为 `bb9afe4a-fafc-446d-833d-3a3638c563e3`；此后本地修改需要再次发布。当前环境的 Cloudflare 认证服务连接此前受限，未改动已保存凭据。
