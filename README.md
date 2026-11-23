@@ -141,6 +141,17 @@ pnpm deploy
 
 Cloudflare 中的 Worker 名称应与 `wrangler.jsonc` 一致。安装依赖时使用提交的 `pnpm-lock.yaml`。构建步骤已生成产物，部署命令无需再运行一次 build。
 
+在 **Settings → Builds → Build variables and secrets** 中设置普通构建变量：
+
+| 变量 | 值 |
+| --- | --- |
+| `NODE_VERSION` | `24` |
+| `PNPM_VERSION` | `11` |
+
+`engines.pnpm: "11.x"` 仅声明项目兼容范围，不会让 Cloudflare 自动选择 pnpm 11。这里通过 `PNPM_VERSION=11` 选择 11 系列，不固定小版本。变量必须放在构建设置中，不能只添加到 Worker 的运行时变量。
+
+`pnpm-workspace.yaml` 显式声明 `packages: [.]`，并保留 esbuild 与 workerd 的构建脚本许可。若日志仍出现 `pnpm@9.10.0` 和 `packages field missing or empty`，先确认当前构建拉取了这份配置，再检查上述构建变量。保存变量后重试失败的构建，或等待新的 Git 推送触发。
+
 ### 根域名跳转到 www
 
 正式地址使用 `www.tigerbook.top`。如需 `https://tigerbook.top/...` 自动跳转，在 Cloudflare 对根域名设置 **301 Redirect Rule**：
